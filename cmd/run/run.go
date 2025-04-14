@@ -25,7 +25,11 @@ var Cmd = &cobra.Command{
 }
 
 func Run(cfg config.Config) error {
-	args := append([]string{"test"}, append(cfg.Include, cfg.TestFlags...)...)
+	pkgs, err := cfg.PackagesToTest()
+	if err != nil {
+		return err
+	}
+	args := append([]string{"test"}, append(pkgs, cfg.TestFlags...)...)
 	fmt.Printf("📦 Running: go %s\n", strings.Join(args, " "))
 
 	cmdExec := exec.Command("go", args...)
