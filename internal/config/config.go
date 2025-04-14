@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -67,4 +68,22 @@ func (c Config) PackagesToTest() ([]string, error) {
 	}
 
 	return pkgs, nil
+}
+
+func (c Config) ShouldExclude(path string) bool {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+
+	for _, ex := range c.Exclude {
+		absEx, err := filepath.Abs(ex)
+		if err != nil {
+			continue
+		}
+		if strings.HasPrefix(absPath, absEx) {
+			return true
+		}
+	}
+	return false
 }

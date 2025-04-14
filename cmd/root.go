@@ -9,6 +9,7 @@ import (
 	initPkg "github.com/mickamy/gotcha/cmd/init"
 	"github.com/mickamy/gotcha/cmd/run"
 	"github.com/mickamy/gotcha/cmd/version"
+	"github.com/mickamy/gotcha/cmd/watch"
 )
 
 var (
@@ -31,6 +32,7 @@ func init() {
 	cmd.AddCommand(initPkg.Cmd)
 	cmd.AddCommand(run.Cmd)
 	cmd.AddCommand(version.Cmd)
+	cmd.AddCommand(watch.Cmd)
 }
 
 func Execute() {
