@@ -52,7 +52,7 @@ func Run(cfg config.Config) error {
 		return err
 	}
 
-	fmt.Println("👀 Watching for changes... (press 'r' to re-run, 'q' to quit)")
+	fmt.Println("👀 Watching for changes... (press 'r' to re-run, 'q' or 'ctrl+d' to quit)")
 
 	trigger := make(chan struct{}, 1)
 	keys := make(chan stdin.KeyPressDownEvent)
@@ -93,6 +93,10 @@ func Run(cfg config.Config) error {
 		case err := <-watcher.Errors:
 			return err
 		case key := <-keys:
+			if key.EOF {
+				fmt.Println("\n👋 Received EOF (ctrl+d), exiting...")
+				os.Exit(0)
+			}
 			switch key.Key {
 			case "r", "R":
 				trigger <- struct{}{}

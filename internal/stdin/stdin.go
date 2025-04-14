@@ -9,7 +9,8 @@ import (
 )
 
 type KeyPressDownEvent struct {
-	Key string
+	Key string // non-empty if a valid key from `keys` slice
+	EOF bool   // true if stdin closed (e.g. ctrl+d)
 }
 
 func Listen(keys []string, trigger chan<- KeyPressDownEvent) error {
@@ -24,14 +25,18 @@ func Listen(keys []string, trigger chan<- KeyPressDownEvent) error {
 
 	buf := make([]byte, 1)
 	for {
-		_, err := os.Stdin.Read(buf)
-		if err != nil {
+		n, err := os.Stdin.Read(buf)
+		if err != nil || n == 0 {
 			continue
 		}
+
+		if buf[0] == 4 { // ASCII EOT = ctrl+d
+			trigger <- KeyPressDownEvent{EOF: true}
+		}
+
 		key := string(buf[0])
-		if !slices.Contains(keys, key) {
-			continue
+		if slices.Contains(keys, key) {
+			trigger <- KeyPressDownEvent{Key: key}
 		}
-		trigger <- KeyPressDownEvent{Key: key}
 	}
 }
