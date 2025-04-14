@@ -1,5 +1,7 @@
 package config
 
+const Path = ".gotcha.yaml"
+
 type Config struct {
 	Include   []string `yaml:"include"`
 	Exclude   []string `yaml:"exclude"`
