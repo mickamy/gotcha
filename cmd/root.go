@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	initPkg "github.com/mickamy/gotcha/cmd/init"
+	"github.com/mickamy/gotcha/cmd/run"
 	"github.com/mickamy/gotcha/cmd/version"
 )
 
@@ -28,6 +29,7 @@ var cmd = &cobra.Command{
 
 func init() {
 	cmd.AddCommand(initPkg.Cmd)
+	cmd.AddCommand(run.Cmd)
 	cmd.AddCommand(version.Cmd)
 }
 

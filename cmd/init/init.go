@@ -10,10 +10,6 @@ import (
 	"github.com/mickamy/gotcha/internal/config"
 )
 
-const (
-	path = ".gotcha.yaml"
-)
-
 var Cmd = &cobra.Command{
 	Use:   "init",
 	Short: "Generate .gotcha.yaml configuration file",
@@ -24,14 +20,14 @@ var Cmd = &cobra.Command{
 }
 
 func Run() error {
-	if _, err := os.Stat(path); err == nil {
+	if _, err := os.Stat(config.Path); err == nil {
 		fmt.Print(".gotcha.yaml already exists. Overwrite? [y/N]: ")
 		var res string
 		if _, err := fmt.Scanln(&res); err != nil {
 			return fmt.Errorf("failed to read input: %w", err)
 		}
 		if res != "y" && res != "Y" {
-			fmt.Println("\nCanceled.")
+			fmt.Println("Canceled.")
 			return nil
 		}
 	}
@@ -42,11 +38,11 @@ func Run() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	err = os.WriteFile(path, data, 0644)
+	err = os.WriteFile(config.Path, data, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	fmt.Println("\n✅ .gotcha.yaml file generated!")
+	fmt.Println("✅ .gotcha.yaml file generated!")
 	return nil
 }
