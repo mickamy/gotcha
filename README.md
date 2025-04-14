@@ -76,6 +76,16 @@ This reruns tests automatically whenever `.go` files change.
 | `exclude` | Directories or paths to ignore                     |
 | `args`    | Arguments passed to `go test` (e.g. `-v`, `-race`) |
 
+## 💡 Why gotcha?
+
+Compared to similar tools like `gotestsum`, `richgo`, `ginkgo watch`, and `entr`, gotcha provides:
+
+- 🧠 **Zero-config default behavior**: just run `gotcha watch` in any Go project
+- 🧹 **YAML-based filtering**: simple includes/excludes for packages and paths
+- 📦 **Lightweight**: single-purpose CLI with no dependencies on external runners or frameworks
+- 🎯 **TDD-first design**: optimized for fast, repeated test execution during development
+- 🌈 **Clean, colored terminal UX**: highlights pass/fail status clearlyz
+
 ## 🛣 Roadmap
 
 - [ ] `--fast` flag to test only changed packages
