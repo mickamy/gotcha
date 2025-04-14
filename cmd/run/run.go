@@ -32,7 +32,11 @@ func Run(cfg config.Config) error {
 	}
 
 	args := append([]string{"test"}, append(pkgs, cfg.Args...)...)
-	fmt.Printf("📦 Running: go %s\n", strings.Join(args, " "))
+	fmt.Println("📦 Running: go test")
+	for _, pkg := range pkgs {
+		fmt.Printf("  %s\n", pkg)
+	}
+	fmt.Printf("  %s\n\n", strings.Join(cfg.Args, " "))
 
 	cmdExec := exec.Command("go", args...)
 	cmdExec.Stdout = os.Stdout
