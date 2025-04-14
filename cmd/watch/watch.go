@@ -11,6 +11,7 @@ import (
 
 	"github.com/mickamy/gotcha/cmd/run"
 	"github.com/mickamy/gotcha/internal/config"
+	"github.com/mickamy/gotcha/internal/stdin"
 )
 
 var Cmd = &cobra.Command{
@@ -51,9 +52,16 @@ func Run(cfg config.Config) error {
 		return err
 	}
 
-	fmt.Println("👀 Watching for changes...")
+	fmt.Println("👀 Watching for changes... (press 'r' to re-run, 'q' to quit)")
 
 	trigger := make(chan struct{}, 1)
+	keys := make(chan stdin.KeyPressDownEvent)
+
+	go func() {
+		if err := stdin.Listen([]string{"r", "R", "q", "Q"}, keys); err != nil {
+			fmt.Println("⚠️ Failed to listen for keys:", err)
+		}
+	}()
 
 	go func() {
 		var lastRun time.Time
@@ -70,6 +78,9 @@ func Run(cfg config.Config) error {
 		}
 	}()
 
+	// initial run
+	trigger <- struct{}{}
+
 	for {
 		select {
 		case event, ok := <-watcher.Events:
@@ -81,6 +92,14 @@ func Run(cfg config.Config) error {
 			}
 		case err := <-watcher.Errors:
 			return err
+		case key := <-keys:
+			switch key.Key {
+			case "r", "R":
+				trigger <- struct{}{}
+			case "q", "Q":
+				fmt.Println("\n👋 Exiting...")
+				return nil
+			}
 		}
 	}
 }
