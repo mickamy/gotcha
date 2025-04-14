@@ -1,0 +1,39 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	initPkg "github.com/mickamy/gotcha/cmd/init"
+	"github.com/mickamy/gotcha/cmd/version"
+)
+
+var (
+	versionFlag bool
+)
+
+var cmd = &cobra.Command{
+	Use:   "gotcha",
+	Short: "A Go test watcher",
+	Long:  `gotcha is a CLI tool to automatically run go test on file changes.`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if versionFlag {
+			fmt.Printf("gotcha version %s\n", "dev")
+			os.Exit(0)
+		}
+	},
+}
+
+func init() {
+	cmd.AddCommand(initPkg.Cmd)
+	cmd.AddCommand(version.Cmd)
+}
+
+func Execute() {
+	if err := cmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
