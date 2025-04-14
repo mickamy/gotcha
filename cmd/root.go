@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	initPkg "github.com/mickamy/gotcha/cmd/init"
 	"github.com/mickamy/gotcha/cmd/version"
 )
 
@@ -26,7 +27,7 @@ var cmd = &cobra.Command{
 }
 
 func init() {
-	cmd.PersistentFlags().BoolVarP(&versionFlag, "version", "v", false, "Show version and exit")
+	cmd.AddCommand(initPkg.Cmd)
 	cmd.AddCommand(version.Cmd)
 }
 
