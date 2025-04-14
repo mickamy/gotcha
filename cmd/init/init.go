@@ -31,7 +31,7 @@ func Run() error {
 			return fmt.Errorf("failed to read input: %w", err)
 		}
 		if res != "y" && res != "Y" {
-			fmt.Println("\nCanceled.")
+			fmt.Println("Canceled.")
 			return nil
 		}
 	}
@@ -47,6 +47,6 @@ func Run() error {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	fmt.Println("\n✅ .gotcha.yaml file generated!")
+	fmt.Println("✅ .gotcha.yaml file generated!")
 	return nil
 }
