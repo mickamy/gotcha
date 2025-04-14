@@ -30,8 +30,13 @@ func Listen(keys []string, trigger chan<- KeyPressDownEvent) error {
 			continue
 		}
 
-		if buf[0] == 4 { // ASCII EOT = ctrl+d
+		switch buf[0] {
+		case 3: // ctrl+c
+			trigger <- KeyPressDownEvent{Key: "ctrl+c"}
+			return nil
+		case 4: // ctrl+d
 			trigger <- KeyPressDownEvent{EOF: true}
+			return nil
 		}
 
 		key := string(buf[0])

@@ -93,16 +93,16 @@ func Run(cfg config.Config) error {
 		case err := <-watcher.Errors:
 			return err
 		case key := <-keys:
-			if key.EOF {
-				fmt.Println("\n👋 Received EOF (ctrl+d), exiting...")
-				os.Exit(0)
-			}
 			switch key.Key {
 			case "r", "R":
 				trigger <- struct{}{}
-			case "q", "Q":
+			case "q", "Q", "ctrl+c":
 				fmt.Println("\n👋 Exiting...")
 				return nil
+			}
+			if key.EOF {
+				fmt.Println("\n👋 Received EOF (ctrl+d), exiting...")
+				os.Exit(0)
 			}
 		}
 	}
