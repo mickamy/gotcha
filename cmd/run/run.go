@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -29,6 +30,7 @@ func Run(cfg config.Config) error {
 	if err != nil {
 		return err
 	}
+
 	args := append([]string{"test"}, append(pkgs, cfg.Args...)...)
 	fmt.Printf("📦 Running: go %s\n", strings.Join(args, " "))
 
@@ -37,9 +39,12 @@ func Run(cfg config.Config) error {
 	cmdExec.Stderr = os.Stderr
 	cmdExec.Stdin = os.Stdin
 
+	start := time.Now()
 	if err := cmdExec.Run(); err != nil {
+		fmt.Printf("\033[31m❌ Tests failed (%s)\033[0m\n", time.Since(start))
 		return fmt.Errorf("go test failed: %w", err)
 	}
 
+	fmt.Printf("\033[32m✅ All tests passed (%s)\033[0m\n", time.Since(start))
 	return nil
 }
