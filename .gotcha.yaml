@@ -3,5 +3,5 @@ include:
 exclude:
     - vendor/
     - mocks/
-test_flags:
+args:
     - -v

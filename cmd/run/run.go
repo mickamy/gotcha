@@ -29,7 +29,7 @@ func Run(cfg config.Config) error {
 	if err != nil {
 		return err
 	}
-	args := append([]string{"test"}, append(pkgs, cfg.TestFlags...)...)
+	args := append([]string{"test"}, append(pkgs, cfg.Args...)...)
 	fmt.Printf("📦 Running: go %s\n", strings.Join(args, " "))
 
 	cmdExec := exec.Command("go", args...)

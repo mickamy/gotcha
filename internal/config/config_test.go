@@ -16,5 +16,5 @@ func TestLoadByPath(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, []string{"./..."}, cfg.Include)
 	assert.DeepEqual(t, []string{"vendor/", "mocks/"}, cfg.Exclude)
-	assert.DeepEqual(t, []string{"-v"}, cfg.TestFlags)
+	assert.DeepEqual(t, []string{"-v"}, cfg.Args)
 }

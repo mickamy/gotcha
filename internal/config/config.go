@@ -12,16 +12,16 @@ import (
 const Path = ".gotcha.yaml"
 
 type Config struct {
-	Include   []string `yaml:"include"`
-	Exclude   []string `yaml:"exclude"`
-	TestFlags []string `yaml:"test_flags"`
+	Include []string `yaml:"include"`
+	Exclude []string `yaml:"exclude"`
+	Args    []string `yaml:"args"`
 }
 
 func Default() *Config {
 	return &Config{
-		Include:   []string{"./..."},
-		Exclude:   []string{"vendor/", "mocks/"},
-		TestFlags: []string{"-v"},
+		Include: []string{"./..."},
+		Exclude: []string{"vendor/", "mocks/"},
+		Args:    []string{"-v"},
 	}
 }
 
