@@ -21,15 +21,15 @@ func Listen(keys []string, trigger chan<- KeyPressDownEvent) error {
 
 		switch buf[0] {
 		case 3: // ctrl+c
-			trigger <- KeyPressDownEvent{Key: "ctrl+c"}:
+			trigger <- KeyPressDownEvent{Key: "ctrl+c"}
 			return nil
 		case 4: // ctrl+d
-			trigger <- KeyPressDownEvent{EOF: true}:
+			trigger <- KeyPressDownEvent{EOF: true}
 		}
 
 		key := string(buf[0])
 		if slices.Contains(keys, key) {
-			trigger <- KeyPressDownEvent{Key: key}:
+			trigger <- KeyPressDownEvent{Key: key}
 		}
 	}
 }
