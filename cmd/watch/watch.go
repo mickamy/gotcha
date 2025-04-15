@@ -14,6 +14,10 @@ import (
 	"github.com/mickamy/gotcha/internal/stdin"
 )
 
+var (
+	summary bool
+)
+
 var Cmd = &cobra.Command{
 	Use:   "watch",
 	Short: "Watch for file changes and run tests automatically",
@@ -23,11 +27,15 @@ var Cmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return Run(cfg)
+		return Run(cfg, summary)
 	},
 }
 
-func Run(cfg config.Config) error {
+func init() {
+	Cmd.Flags().BoolVarP(&summary, "summary", "s", false, "Output in JSON format")
+}
+
+func Run(cfg config.Config, summary bool) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -77,8 +85,14 @@ func Run(cfg config.Config) error {
 			_ = stdin.ExitRawMode()
 			fmt.Print("\033[H\033[2J")
 
-			if err := run.Run(cfg); err != nil {
-				fmt.Println(err)
+			if summary {
+				if err := run.RunSummary(cfg); err != nil {
+					fmt.Println(err)
+				}
+			} else {
+				if err := run.Run(cfg); err != nil {
+					fmt.Println(err)
+				}
 			}
 			_ = stdin.EnterRawMode()
 		}
