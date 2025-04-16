@@ -16,10 +16,33 @@ supporting TDD and fast feedback.
 
 ---
 
+## 🔍 Comparison to Other Tools
+
+| Tool           | Language | Purpose                        | How gotcha differs                                                         |
+|----------------|----------|--------------------------------|----------------------------------------------------------------------------|
+| `spring rspec` | Ruby     | Fast RSpec runs via preload    | gotcha is CLI-based and watch-driven, optimized for Go                     |
+| `watchexec`    | Any      | Run any command on file change | gotcha is Go-native, built specifically for `go test`                      |
+| `gotestsum`    | Go       | Pretty test output formatting  | gotcha supports live watching and reruns with test summary                 |
+| `entr`         | Any      | Minimal file-change trigger    | gotcha provides YAML config, input control (`r`, `q`), and output handling |
+
+Unlike generic file watchers, **gotcha is purpose-built for Go developers** who want fast, automatic test feedback
+without extra setup or dependencies.
+
+✅ Lightweight CLI  
+✅ Integrated `go test` runner  
+✅ `.gotcha.yaml` for fine-grained test control  
+✅ Supports `--summary` for clean test result overview  
+✅ `watch` mode with keyboard control (`r` to rerun, `q` to quit)
+
+---
+
 ## 📦 Install
 
 ```sh
+# go >= v1.24
 go get -tool github.com/mickamy/gotcha@latest
+# go < v1.24
+go install github.com/mickamy/gotcha@latest
 ```
 
 or
