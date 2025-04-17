@@ -32,7 +32,7 @@ var Cmd = &cobra.Command{
 }
 
 func init() {
-	Cmd.Flags().BoolVarP(&summary, "summary", "s", false, "Output in JSON format")
+	Cmd.Flags().BoolVarP(&summary, "summary", "s", false, "Summarize test results")
 }
 
 func Run(cfg config.Config, summary bool) error {
@@ -49,12 +49,10 @@ func Run(cfg config.Config, summary bool) error {
 		if err != nil || !info.IsDir() {
 			return nil
 		}
-
 		if cfg.ShouldExclude(path) {
 			fmt.Println("Skipping excluded path:", path)
 			return nil
 		}
-
 		return watcher.Add(path)
 	})
 	if err != nil {
@@ -63,7 +61,6 @@ func Run(cfg config.Config, summary bool) error {
 
 	fmt.Println("👀 Watching for changes... (press 'r' to re-run, 'q' or 'ctrl+d' to quit)")
 
-	trigger := make(chan struct{}, 1)
 	keys := make(chan stdin.KeyPressDownEvent, 1)
 	done := make(chan struct{})
 
@@ -74,32 +71,44 @@ func Run(cfg config.Config, summary bool) error {
 		close(done)
 	}()
 
+	runTests := func() {
+		_ = stdin.ExitRawMode()
+		fmt.Print("\033[H\033[2J")
+		if summary {
+			if err := run.RunSummary(cfg); err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			if err := run.Run(cfg); err != nil {
+				fmt.Println(err)
+			}
+		}
+		_ = stdin.EnterRawMode()
+	}
+
+	runTests()
+
+	debounceDelay := 1000 * time.Millisecond
+	debounceSignal := make(chan struct{}, 1)
+
 	go func() {
-		var lastRun time.Time
-		for range trigger {
-			if time.Since(lastRun) < 300*time.Millisecond {
-				continue
+		var timer *time.Timer
+		for {
+			<-debounceSignal
+			if timer != nil {
+				timer.Stop()
 			}
-			lastRun = time.Now()
+			timer = time.NewTimer(debounceDelay)
 
-			_ = stdin.ExitRawMode()
-			fmt.Print("\033[H\033[2J")
-
-			if summary {
-				if err := run.RunSummary(cfg); err != nil {
-					fmt.Println(err)
-				}
-			} else {
-				if err := run.Run(cfg); err != nil {
-					fmt.Println(err)
-				}
+			select {
+			case <-timer.C:
+				runTests()
+			case <-done:
+				timer.Stop()
+				return
 			}
-			_ = stdin.EnterRawMode()
 		}
 	}()
-
-	// initial run
-	trigger <- struct{}{}
 
 	for {
 		select {
@@ -108,14 +117,19 @@ func Run(cfg config.Config, summary bool) error {
 				return nil
 			}
 			if filepath.Ext(event.Name) == ".go" {
-				trigger <- struct{}{}
+				select {
+				case debounceSignal <- struct{}{}:
+				default:
+				}
 			}
+
 		case err := <-watcher.Errors:
 			return err
+
 		case key := <-keys:
 			switch key.Key {
 			case "r", "R":
-				trigger <- struct{}{}
+				runTests()
 			case "q", "Q", "ctrl+c":
 				fmt.Println("\n👋 Exiting...")
 				return nil
@@ -124,6 +138,7 @@ func Run(cfg config.Config, summary bool) error {
 				fmt.Println("\n👋 Received EOF (ctrl+d), exiting...")
 				return nil
 			}
+
 		case <-done:
 			return nil
 		}
