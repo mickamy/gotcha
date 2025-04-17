@@ -12,20 +12,10 @@ import (
 	"github.com/mickamy/gotcha/cmd/watch"
 )
 
-var (
-	versionFlag bool
-)
-
 var cmd = &cobra.Command{
 	Use:   "gotcha",
 	Short: "A Go test watcher",
 	Long:  `gotcha is a CLI tool to automatically run go test on file changes.`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if versionFlag {
-			fmt.Printf("gotcha version %s\n", "dev")
-			os.Exit(0)
-		}
-	},
 }
 
 func init() {
