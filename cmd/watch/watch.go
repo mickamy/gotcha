@@ -75,13 +75,9 @@ func Run(cfg config.Config, summary bool) error {
 		_ = stdin.ExitRawMode()
 		fmt.Print("\033[H\033[2J")
 		if summary {
-			if err := run.RunSummary(cfg); err != nil {
-				fmt.Println(err)
-			}
+			run.RunSummary(cfg, true)
 		} else {
-			if err := run.Run(cfg); err != nil {
-				fmt.Println(err)
-			}
+			run.Run(cfg, true)
 		}
 		_ = stdin.EnterRawMode()
 	}
