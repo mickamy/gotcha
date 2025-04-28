@@ -21,15 +21,17 @@ var Cmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run go test once with gotcha config",
 	Long:  "Run go test once with gotcha config",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.Load()
 		if err != nil {
-			return err
+			_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
 		}
 		if summary {
-			return RunSummary(cfg)
+			RunSummary(cfg, false)
+			return
 		}
-		return Run(cfg)
+		Run(cfg, false)
 	},
 }
 
@@ -37,10 +39,11 @@ func init() {
 	Cmd.Flags().BoolVarP(&summary, "summary", "s", false, "Output in JSON format")
 }
 
-func Run(cfg config.Config) error {
+func Run(cfg config.Config, watchMode bool) {
 	pkgs, err := cfg.PackagesToTest()
 	if err != nil {
-		return err
+		_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
 
 	args := append([]string{"test"}, append(pkgs, cfg.Args...)...)
@@ -58,17 +61,21 @@ func Run(cfg config.Config) error {
 	start := time.Now()
 	if err := cmdExec.Run(); err != nil {
 		fmt.Printf("\033[31m❌ Tests failed (%s)\033[0m\n", time.Since(start))
-		return fmt.Errorf("go test failed: %w", err)
+		_, _ = fmt.Fprintf(os.Stderr, "go test failed: %v\n", err)
+
+		if !watchMode {
+			os.Exit(1)
+		}
 	}
 
 	fmt.Printf("\033[32m✅ All tests passed (%s)\033[0m\n", time.Since(start))
-	return nil
 }
 
-func RunSummary(cfg config.Config) error {
+func RunSummary(cfg config.Config, watchMode bool) {
 	pkgs, err := cfg.PackagesToTest()
 	if err != nil {
-		return err
+		_, _ = fmt.Fprintf(os.Stderr, "failed to get packages: %v\n", err)
+		os.Exit(1)
 	}
 
 	args := append([]string{"test", "-json"}, append(pkgs, cfg.Args...)...)
@@ -76,13 +83,15 @@ func RunSummary(cfg config.Config) error {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		_, _ = fmt.Fprintf(os.Stderr, "failed to get stdout pipe: %v\n", err)
+		os.Exit(1)
 	}
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start test: %w", err)
+		_, _ = fmt.Fprintf(os.Stderr, "failed to start command: %v\n", err)
+		os.Exit(1)
 	}
 
 	decoder := json.NewDecoder(stdout)
@@ -102,7 +111,8 @@ func RunSummary(cfg config.Config) error {
 			Package string
 		}
 		if err := decoder.Decode(&evt); err != nil {
-			return fmt.Errorf("failed to decode test output: %w", err)
+			_, _ = fmt.Fprintf(os.Stderr, "failed to decode JSON: %v\n", err)
+			os.Exit(1)
 		}
 
 		switch evt.Action {
@@ -133,10 +143,12 @@ func RunSummary(cfg config.Config) error {
 			for _, name := range failedTests {
 				fmt.Printf("  - %s\n", name)
 			}
+
+			if !watchMode {
+				os.Exit(1)
+			}
 		}
-		os.Exit(1)
 	}
 
 	fmt.Printf("\033[32m✅ %d passed, %d skipped (%d total)\033[0m\n", passed, skipped, total)
-	return nil
 }
