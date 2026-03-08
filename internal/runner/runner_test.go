@@ -59,13 +59,21 @@ func TestParseEvents(t *testing.T) {
 			wantOK:      true,
 		},
 		{
-			name: "package-level events ignored",
+			name: "package-level pass does not affect test counts",
 			input: lines(
 				`{"Action":"pass","Package":"pkg"}`,
-				`{"Action":"fail","Package":"pkg2"}`,
 			),
 			wantTotal: 0,
 			wantOK:    true,
+		},
+		{
+			name: "package-level fail marks not OK",
+			input: lines(
+				`{"Action":"output","Package":"pkg","Output":"build error\n"}`,
+				`{"Action":"fail","Package":"pkg"}`,
+			),
+			wantTotal: 0,
+			wantOK:    false,
 		},
 		{
 			name:       "empty input",
@@ -150,6 +158,39 @@ func TestParseEvents_CapturesOutput(t *testing.T) {
 	}
 	if out[1] != "line 2\n" {
 		t.Errorf("output[1]: got %q, want %q", out[1], "line 2\n")
+	}
+}
+
+func TestParseEvents_PackageError(t *testing.T) {
+	t.Parallel()
+
+	input := lines(
+		`{"Action":"output","Package":"pkg","Output":"# pkg\n"}`,
+		`{"Action":"output","Package":"pkg","Output":"./main.go:5: undefined: foo\n"}`,
+		`{"Action":"fail","Package":"pkg"}`,
+	)
+
+	result, err := runner.ParseEvents(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result.OK {
+		t.Error("expected OK=false for package build error")
+	}
+	if len(result.FailedPackages) != 1 {
+		t.Fatalf("FailedPackages: got %d, want 1", len(result.FailedPackages))
+	}
+	if result.FailedPackages[0] != "pkg" {
+		t.Errorf("FailedPackages[0]: got %q, want %q", result.FailedPackages[0], "pkg")
+	}
+
+	out, ok := result.PackageOutput["pkg"]
+	if !ok {
+		t.Fatal("expected package output for pkg")
+	}
+	if len(out) != 2 {
+		t.Fatalf("package output lines: got %d, want 2", len(out))
 	}
 }
 

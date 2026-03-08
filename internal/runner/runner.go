@@ -34,14 +34,16 @@ func (t TestID) String() string {
 
 // Result holds aggregated test results.
 type Result struct {
-	Total       int
-	Passed      int
-	Failed      int
-	Skipped     int
-	FailedTests []TestID
-	Output      map[TestID][]string // per-test output lines
-	Duration    time.Duration
-	OK          bool
+	Total          int
+	Passed         int
+	Failed         int
+	Skipped        int
+	FailedTests    []TestID
+	Output         map[TestID][]string // per-test output lines
+	PackageOutput  map[string][]string // package-level output (build errors etc.)
+	FailedPackages []string            // packages that failed without a test name
+	Duration       time.Duration
+	OK             bool
 }
 
 // Run executes go test with streaming output.
@@ -77,7 +79,7 @@ func RunJSON(ctx context.Context, pkgs, args []string, stderr io.Writer) (Result
 	if err != nil {
 		return result, err
 	}
-	if runErr != nil && result.Failed == 0 {
+	if runErr != nil && result.Failed == 0 && len(result.FailedPackages) == 0 {
 		return result, fmt.Errorf("go test: %w", runErr)
 	}
 
@@ -88,6 +90,7 @@ func RunJSON(ctx context.Context, pkgs, args []string, stderr io.Writer) (Result
 func ParseEvents(r io.Reader) (Result, error) {
 	var result Result
 	result.Output = make(map[TestID][]string)
+	result.PackageOutput = make(map[string][]string)
 
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), 1024*1024)
@@ -102,7 +105,14 @@ func ParseEvents(r io.Reader) (Result, error) {
 			continue
 		}
 
+		// Package-level events (build errors, package failures).
 		if evt.Test == "" {
+			switch evt.Action {
+			case "output":
+				result.PackageOutput[evt.Package] = append(result.PackageOutput[evt.Package], evt.Output)
+			case "fail":
+				result.FailedPackages = append(result.FailedPackages, evt.Package)
+			}
 			continue
 		}
 
@@ -128,7 +138,7 @@ func ParseEvents(r io.Reader) (Result, error) {
 		return result, fmt.Errorf("scan test output: %w", err)
 	}
 
-	result.OK = result.Failed == 0
+	result.OK = result.Failed == 0 && len(result.FailedPackages) == 0
 
 	return result, nil
 }

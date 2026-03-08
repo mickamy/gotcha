@@ -232,6 +232,7 @@ func printResult(w io.Writer, elapsed interface{ String() string }, ok bool) {
 }
 
 func printSummary(w io.Writer, result runner.Result) {
+	printPackageErrors(w, result)
 	if result.OK {
 		fmt.Fprintf(w,
 			"\033[32m%d passed, %d skipped (%d total, %s)\033[0m\n",
@@ -247,6 +248,7 @@ func printSummary(w io.Writer, result runner.Result) {
 }
 
 func printFocusOutput(w io.Writer, result runner.Result) {
+	printPackageErrors(w, result)
 	if result.OK {
 		fmt.Fprintf(w,
 			"\033[32mAll %d tests passed (%s)\033[0m\n",
@@ -278,6 +280,18 @@ func printFailedTests(w io.Writer, result runner.Result) {
 	fmt.Fprintln(w, "\nFailed tests:")
 	for _, id := range result.FailedTests {
 		fmt.Fprintf(w, "  - %s\n", id)
+	}
+}
+
+func printPackageErrors(w io.Writer, result runner.Result) {
+	for _, pkg := range result.FailedPackages {
+		fmt.Fprintf(w, "\033[31m--- FAIL: %s (build)\033[0m\n", pkg)
+		if lines, ok := result.PackageOutput[pkg]; ok {
+			for _, line := range lines {
+				fmt.Fprint(w, "    ", line)
+			}
+		}
+		fmt.Fprintln(w)
 	}
 }
 
