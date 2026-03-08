@@ -200,7 +200,8 @@ func filterExcluded(cfg config.Config, pkgs []string) []string {
 func runJSON(ctx context.Context, pkgs, args []string, focus bool) bool {
 	result, err := runner.RunJSON(ctx, pkgs, args, os.Stderr)
 	if err != nil {
-		fatal(err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return false
 	}
 
 	if focus {
