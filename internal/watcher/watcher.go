@@ -28,7 +28,7 @@ func Watch(cfg config.Config, onChange OnChange) error {
 	raw := term.NewRawMode(int(os.Stdin.Fd()))
 
 	// stop is closed when Watch returns (any exit path),
-	// ensuring Listen and debounceLoop goroutines are cleaned up.
+	// ensuring all goroutines are cleaned up.
 	stop := make(chan struct{})
 	defer func() {
 		close(stop)
@@ -43,7 +43,6 @@ func Watch(cfg config.Config, onChange OnChange) error {
 	fmt.Println("Watching for changes... (press 'r' to re-run, 'q' to quit)")
 
 	keys := make(chan term.KeyEvent, 1)
-
 	go term.Listen([]string{"r", "R", "q", "Q"}, keys, stop)
 
 	runWithRaw := func() {
@@ -53,12 +52,18 @@ func Watch(cfg config.Config, onChange OnChange) error {
 		_ = raw.Enter()
 	}
 
-	runWithRaw()
+	// All test executions are serialized through the trigger channel
+	// to prevent concurrent runs and raw mode races.
+	trigger := make(chan struct{}, 1)
+	go runLoop(trigger, stop, runWithRaw)
+
+	// Initial run.
+	trigger <- struct{}{}
 
 	debounce := make(chan struct{}, 1)
-	go debounceLoop(debounce, stop, runWithRaw)
+	go debounceLoop(debounce, stop, trigger)
 
-	return eventLoop(w, keys, debounce, stop, runWithRaw)
+	return eventLoop(w, keys, debounce, trigger, stop)
 }
 
 func walkDirs(w *fsnotify.Watcher, cfg config.Config) error {
@@ -73,7 +78,18 @@ func walkDirs(w *fsnotify.Watcher, cfg config.Config) error {
 	})
 }
 
-func debounceLoop(signal <-chan struct{}, stop <-chan struct{}, fn func()) {
+func runLoop(trigger <-chan struct{}, stop <-chan struct{}, fn func()) {
+	for {
+		select {
+		case <-trigger:
+			fn()
+		case <-stop:
+			return
+		}
+	}
+}
+
+func debounceLoop(signal <-chan struct{}, stop <-chan struct{}, trigger chan<- struct{}) {
 	for {
 		select {
 		case <-signal:
@@ -84,9 +100,10 @@ func debounceLoop(signal <-chan struct{}, stop <-chan struct{}, fn func()) {
 		timer := time.NewTimer(debounceDelay)
 		select {
 		case <-timer.C:
-			fn()
-			// Drain signals that arrived during fn() to prevent double-run.
-			// Fixes: https://github.com/mickamy/gotcha/issues/12
+			select {
+			case trigger <- struct{}{}:
+			default:
+			}
 			drain(signal)
 		case <-stop:
 			timer.Stop()
@@ -109,8 +126,8 @@ func eventLoop(
 	w *fsnotify.Watcher,
 	keys <-chan term.KeyEvent,
 	debounce chan<- struct{},
+	trigger chan<- struct{},
 	stop <-chan struct{},
-	onRerun func(),
 ) error {
 	for {
 		select {
@@ -134,7 +151,10 @@ func eventLoop(
 				fmt.Println("\nExiting...")
 				return nil
 			case key.Key == "r" || key.Key == "R":
-				onRerun()
+				select {
+				case trigger <- struct{}{}:
+				default:
+				}
 			}
 
 		case <-stop:
