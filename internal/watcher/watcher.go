@@ -78,7 +78,10 @@ func Watch(cfg config.Config, onChange OnChange) error {
 
 func walkDirs(w *fsnotify.Watcher, cfg config.Config) error {
 	return filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if err != nil || !info.IsDir() {
+		if err != nil {
+			return fmt.Errorf("walk directory %q: %w", path, err)
+		}
+		if !info.IsDir() {
 			return nil
 		}
 		if cfg.ShouldExclude(path) {
