@@ -173,7 +173,7 @@ func resolvePackages(ctx context.Context, cfg config.Config, fast bool) []string
 	var resolved []string
 	for _, pkg := range pkgs {
 		rel := pkg
-		if strings.HasPrefix(pkg, mod) {
+		if pkg == mod || strings.HasPrefix(pkg, mod+"/") {
 			trimmed := strings.TrimPrefix(pkg, mod)
 			if trimmed == "" {
 				rel = "."
