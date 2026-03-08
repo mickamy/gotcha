@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -61,10 +62,16 @@ func Save(path string, cfg Config) error {
 }
 
 // ShouldExclude reports whether the given path matches any exclusion pattern.
+// Matching is done per path segment so "vendor/" excludes "vendor" and
+// "foo/vendor/bar" but not "go-vendor-tool".
 func (c Config) ShouldExclude(path string) bool {
+	segments := strings.Split(filepath.ToSlash(path), "/")
 	for _, ex := range c.Exclude {
-		if strings.Contains(path, ex) {
-			return true
+		pattern := strings.TrimRight(ex, "/")
+		for _, seg := range segments {
+			if seg == pattern {
+				return true
+			}
 		}
 	}
 	return false

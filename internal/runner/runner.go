@@ -72,8 +72,11 @@ func RunJSON(ctx context.Context, pkgs, args []string, stderr io.Writer) (Result
 	runErr := cmd.Run()
 	elapsed := time.Since(start)
 
-	result := ParseEvents(&buf)
+	result, err := ParseEvents(&buf)
 	result.Duration = elapsed
+	if err != nil {
+		return result, err
+	}
 	if runErr != nil && result.Failed == 0 {
 		return result, fmt.Errorf("go test: %w", runErr)
 	}
@@ -82,11 +85,12 @@ func RunJSON(ctx context.Context, pkgs, args []string, stderr io.Writer) (Result
 }
 
 // ParseEvents reads go test -json output and aggregates results.
-func ParseEvents(r io.Reader) Result {
+func ParseEvents(r io.Reader) (Result, error) {
 	var result Result
 	result.Output = make(map[TestID][]string)
 
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), 1024*1024)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
@@ -120,9 +124,13 @@ func ParseEvents(r io.Reader) Result {
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		return result, fmt.Errorf("scan test output: %w", err)
+	}
+
 	result.OK = result.Failed == 0
 
-	return result
+	return result, nil
 }
 
 // ListPackages resolves Go package patterns via go list.

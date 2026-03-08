@@ -154,15 +154,44 @@ func resolvePackages(ctx context.Context, cfg config.Config, fast bool) []string
 		if err != nil {
 			fatal(err)
 		}
-		var filtered []string
-		for _, pkg := range pkgs {
-			if !cfg.ShouldExclude(pkg) {
-				filtered = append(filtered, pkg)
+		return filterExcluded(cfg, pkgs)
+	}
+
+	pkgs, err := runner.ListPackages(ctx, cfg.Include)
+	if err != nil {
+		fatal(err)
+	}
+
+	mod, err := runner.ModulePath(ctx)
+	if err != nil {
+		fatal(err)
+	}
+
+	var resolved []string
+	for _, pkg := range pkgs {
+		rel := pkg
+		if strings.HasPrefix(pkg, mod) {
+			trimmed := strings.TrimPrefix(pkg, mod)
+			if trimmed == "" {
+				rel = "."
+			} else {
+				rel = "./" + strings.TrimPrefix(trimmed, "/")
 			}
 		}
-		return filtered
+		resolved = append(resolved, rel)
 	}
-	return cfg.Include
+
+	return filterExcluded(cfg, resolved)
+}
+
+func filterExcluded(cfg config.Config, pkgs []string) []string {
+	var filtered []string
+	for _, pkg := range pkgs {
+		if !cfg.ShouldExclude(pkg) {
+			filtered = append(filtered, pkg)
+		}
+	}
+	return filtered
 }
 
 func runJSON(ctx context.Context, pkgs, args []string, focus bool) {

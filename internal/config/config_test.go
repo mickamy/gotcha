@@ -118,8 +118,11 @@ func TestShouldExclude(t *testing.T) {
 		{"github.com/foo/bar/mocks/mock_repo.go", true},
 		{"github.com/foo/bar/internal/service", false},
 		{"vendor/something", true},
+		{"vendor", true},
 		{"internal/mocks/repo", true},
 		{"cmd/main.go", false},
+		{"go-vendor-tool", false},
+		{"mockserver/main.go", false},
 	}
 
 	for _, tt := range tests {

@@ -89,7 +89,10 @@ func TestParseEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := runner.ParseEvents(strings.NewReader(tt.input))
+			result, err := runner.ParseEvents(strings.NewReader(tt.input))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
 			if result.Total != tt.wantTotal {
 				t.Errorf("Total: got %d, want %d", result.Total, tt.wantTotal)
@@ -129,7 +132,10 @@ func TestParseEvents_CapturesOutput(t *testing.T) {
 		`{"Action":"fail","Package":"pkg","Test":"TestA"}`,
 	)
 
-	result := runner.ParseEvents(strings.NewReader(input))
+	result, err := runner.ParseEvents(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	id := runner.TestID{Package: "pkg", Test: "TestA"}
 	out, ok := result.Output[id]
