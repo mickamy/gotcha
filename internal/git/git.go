@@ -22,26 +22,28 @@ func ChangedPackages(ref string) ([]string, error) {
 }
 
 // ChangedPackagesUncommitted returns Go package paths with uncommitted changes
-// (both staged and unstaged).
+// (staged, unstaged, and untracked files).
 func ChangedPackagesUncommitted() ([]string, error) {
-	staged, err := gitDiffStaged()
-	if err != nil {
-		return nil, err
-	}
-
-	unstaged, err := gitDiffUnstaged()
-	if err != nil {
-		return nil, err
+	sources := []func() ([]byte, error){
+		gitDiffStaged,
+		gitDiffUnstaged,
+		gitUntracked,
 	}
 
 	seen := make(map[string]struct{})
 	var pkgs []string
-	for _, p := range append(extractPackages(staged), extractPackages(unstaged)...) {
-		if _, ok := seen[p]; ok {
-			continue
+	for _, fn := range sources {
+		out, err := fn()
+		if err != nil {
+			return nil, err
 		}
-		seen[p] = struct{}{}
-		pkgs = append(pkgs, p)
+		for _, p := range extractPackages(out) {
+			if _, ok := seen[p]; ok {
+				continue
+			}
+			seen[p] = struct{}{}
+			pkgs = append(pkgs, p)
+		}
 	}
 
 	return pkgs, nil
@@ -70,6 +72,15 @@ func gitDiffUnstaged() ([]byte, error) {
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("git diff: %w", err)
+	}
+	return out, nil
+}
+
+func gitUntracked() ([]byte, error) {
+	cmd := exec.Command("git", "ls-files", "--others", "--exclude-standard")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git ls-files --others: %w", err)
 	}
 	return out, nil
 }
