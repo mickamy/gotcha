@@ -33,7 +33,9 @@ func Watch(cfg config.Config, onChange OnChange) error {
 	defer func() {
 		close(stop)
 		_ = w.Close()
-		_ = raw.Exit()
+		if err := raw.Exit(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: %v\n", err)
+		}
 	}()
 
 	if err := walkDirs(w, cfg); err != nil {
@@ -46,10 +48,14 @@ func Watch(cfg config.Config, onChange OnChange) error {
 	go term.Listen([]string{"r", "R", "q", "Q"}, keys, stop)
 
 	runWithRaw := func() {
-		_ = raw.Exit()
+		if err := raw.Exit(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: %v\n", err)
+		}
 		clearScreen()
 		onChange()
-		_ = raw.Enter()
+		if err := raw.Enter(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: %v\n", err)
+		}
 	}
 
 	// All test executions are serialized through the trigger channel
