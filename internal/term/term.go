@@ -53,6 +53,10 @@ func (r *RawMode) Exit() error {
 
 // Listen reads single bytes from stdin and sends KeyEvents for recognized keys.
 // It returns when done is closed, ctrl+c/ctrl+d is received, or stdin reaches EOF.
+//
+// Note: the internal readLoop goroutine may outlive Listen because
+// os.Stdin.Read is a blocking syscall with no cancellation mechanism.
+// This is acceptable for a CLI tool where process exit reclaims all resources.
 func Listen(keys []string, ch chan<- KeyEvent, done <-chan struct{}) {
 	reads := make(chan byte, 1)
 

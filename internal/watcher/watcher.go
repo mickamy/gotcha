@@ -26,7 +26,12 @@ func Watch(cfg config.Config, onChange OnChange) error {
 	}
 
 	raw := term.NewRawMode(int(os.Stdin.Fd()))
+
+	// stop is closed when Watch returns (any exit path),
+	// ensuring Listen and debounceLoop goroutines are cleaned up.
+	stop := make(chan struct{})
 	defer func() {
+		close(stop)
 		_ = w.Close()
 		_ = raw.Exit()
 	}()
@@ -38,12 +43,8 @@ func Watch(cfg config.Config, onChange OnChange) error {
 	fmt.Println("Watching for changes... (press 'r' to re-run, 'q' to quit)")
 
 	keys := make(chan term.KeyEvent, 1)
-	done := make(chan struct{})
 
-	go func() {
-		term.Listen([]string{"r", "R", "q", "Q"}, keys, done)
-		close(done)
-	}()
+	go term.Listen([]string{"r", "R", "q", "Q"}, keys, stop)
 
 	runWithRaw := func() {
 		_ = raw.Exit()
@@ -55,9 +56,9 @@ func Watch(cfg config.Config, onChange OnChange) error {
 	runWithRaw()
 
 	debounce := make(chan struct{}, 1)
-	go debounceLoop(debounce, done, runWithRaw)
+	go debounceLoop(debounce, stop, runWithRaw)
 
-	return eventLoop(w, keys, debounce, done, runWithRaw)
+	return eventLoop(w, keys, debounce, stop, runWithRaw)
 }
 
 func walkDirs(w *fsnotify.Watcher, cfg config.Config) error {
@@ -72,11 +73,11 @@ func walkDirs(w *fsnotify.Watcher, cfg config.Config) error {
 	})
 }
 
-func debounceLoop(signal <-chan struct{}, done <-chan struct{}, fn func()) {
+func debounceLoop(signal <-chan struct{}, stop <-chan struct{}, fn func()) {
 	for {
 		select {
 		case <-signal:
-		case <-done:
+		case <-stop:
 			return
 		}
 
@@ -87,7 +88,7 @@ func debounceLoop(signal <-chan struct{}, done <-chan struct{}, fn func()) {
 			// Drain signals that arrived during fn() to prevent double-run.
 			// Fixes: https://github.com/mickamy/gotcha/issues/12
 			drain(signal)
-		case <-done:
+		case <-stop:
 			timer.Stop()
 			return
 		}
@@ -108,7 +109,7 @@ func eventLoop(
 	w *fsnotify.Watcher,
 	keys <-chan term.KeyEvent,
 	debounce chan<- struct{},
-	done <-chan struct{},
+	stop <-chan struct{},
 	onRerun func(),
 ) error {
 	for {
@@ -136,7 +137,7 @@ func eventLoop(
 				onRerun()
 			}
 
-		case <-done:
+		case <-stop:
 			return nil
 		}
 	}
