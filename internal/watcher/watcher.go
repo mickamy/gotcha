@@ -84,8 +84,21 @@ func debounceLoop(signal <-chan struct{}, done <-chan struct{}, fn func()) {
 		select {
 		case <-timer.C:
 			fn()
+			// Drain signals that arrived during fn() to prevent double-run.
+			// Fixes: https://github.com/mickamy/gotcha/issues/12
+			drain(signal)
 		case <-done:
 			timer.Stop()
+			return
+		}
+	}
+}
+
+func drain(ch <-chan struct{}) {
+	for {
+		select {
+		case <-ch:
+		default:
 			return
 		}
 	}
