@@ -3,90 +3,67 @@ package config
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
-
-	"github.com/mickamy/gotcha/internal/paths"
 )
 
-const Path = ".gotcha.yaml"
+const DefaultPath = ".gotcha.yaml"
 
+// Config holds gotcha settings loaded from YAML.
 type Config struct {
 	Include []string `yaml:"include"`
 	Exclude []string `yaml:"exclude"`
 	Args    []string `yaml:"args"`
 }
 
-func Default() *Config {
-	return &Config{
+// Default returns sensible defaults.
+func Default() Config {
+	return Config{
 		Include: []string{"./..."},
 		Exclude: []string{"vendor/", "mocks/"},
 		Args:    []string{"-v"},
 	}
 }
 
+// Load reads the config from the default path.
 func Load() (Config, error) {
-	return LoadByPath(Path)
+	return LoadByPath(DefaultPath)
 }
 
+// LoadByPath reads the config from the given file.
 func LoadByPath(path string) (Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return Config{}, fmt.Errorf("failed to read config file: %w", err)
+		return Config{}, fmt.Errorf("read config: %w", err)
 	}
 
-	cfg := new(Config)
-	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return Config{}, fmt.Errorf("failed to parse config: %w", err)
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return Config{}, fmt.Errorf("parse config: %w", err)
 	}
 
-	return *cfg, nil
+	return cfg, nil
 }
 
-func (c Config) PackagesToTest() ([]string, error) {
-	all, err := paths.ListPackages(c.Include)
+// Save writes the config as YAML to the given path.
+func Save(path string, cfg Config) error {
+	data, err := yaml.Marshal(cfg)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("marshal config: %w", err)
 	}
 
-	modulePath, err := paths.ModulePath()
-	if err != nil {
-		return nil, err
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("write config: %w", err)
 	}
 
-	var pkgs []string
-	for _, pkg := range all {
-		if c.ShouldExclude(pkg) {
-			continue
-		}
-		if strings.HasPrefix(pkg, modulePath) {
-			rel := strings.TrimPrefix(pkg, modulePath)
-			if rel == "" {
-				pkgs = append(pkgs, ".")
-			} else {
-				pkgs = append(pkgs, "./"+strings.TrimPrefix(rel, "/"))
-			}
-		} else {
-			pkgs = append(pkgs, pkg)
-		}
-	}
-	return pkgs, nil
+	return nil
 }
 
+// ShouldExclude reports whether the given path matches any exclusion pattern.
 func (c Config) ShouldExclude(path string) bool {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return false
-	}
-
 	for _, ex := range c.Exclude {
-		absEx, err := filepath.Abs(ex)
-		if err != nil {
-			continue
-		}
-		if strings.HasPrefix(absPath, absEx) {
+		if strings.Contains(path, ex) {
 			return true
 		}
 	}
