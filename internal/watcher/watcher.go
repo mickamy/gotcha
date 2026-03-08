@@ -42,6 +42,10 @@ func Watch(cfg config.Config, onChange OnChange) error {
 		return err
 	}
 
+	if err := raw.Enter(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", err)
+	}
+
 	fmt.Println("Watching for changes... (press 'r' to re-run, 'q' to quit)")
 
 	keys := make(chan term.KeyEvent, 1)
