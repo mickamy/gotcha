@@ -73,7 +73,10 @@ func runCmd(args []string) {
 	}
 
 	if *focus || *summary {
-		runJSON(ctx, pkgs, cfg.Args, *focus)
+		ok := runJSON(ctx, pkgs, cfg.Args, *focus)
+		if !ok {
+			os.Exit(1)
+		}
 		return
 	}
 
@@ -194,7 +197,7 @@ func filterExcluded(cfg config.Config, pkgs []string) []string {
 	return filtered
 }
 
-func runJSON(ctx context.Context, pkgs, args []string, focus bool) {
+func runJSON(ctx context.Context, pkgs, args []string, focus bool) bool {
 	result, err := runner.RunJSON(ctx, pkgs, args, os.Stderr)
 	if err != nil {
 		fatal(err)
@@ -206,9 +209,7 @@ func runJSON(ctx context.Context, pkgs, args []string, focus bool) {
 		printSummary(os.Stdout, result)
 	}
 
-	if !result.OK {
-		os.Exit(1)
-	}
+	return result.OK
 }
 
 func printRunHeader(pkgs, args []string) {
