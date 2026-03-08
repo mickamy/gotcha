@@ -226,21 +226,21 @@ func printRunHeader(pkgs, args []string) {
 
 func printResult(w io.Writer, elapsed interface{ String() string }, ok bool) {
 	if ok {
-		fmt.Fprintf(w, "\033[32mAll tests passed (%s)\033[0m\n", elapsed)
+		_, _ = fmt.Fprintf(w, "\033[32mAll tests passed (%s)\033[0m\n", elapsed)
 	} else {
-		fmt.Fprintf(w, "\033[31mTests failed (%s)\033[0m\n", elapsed)
+		_, _ = fmt.Fprintf(w, "\033[31mTests failed (%s)\033[0m\n", elapsed)
 	}
 }
 
 func printSummary(w io.Writer, result runner.Result) {
 	printPackageErrors(w, result)
 	if result.OK {
-		fmt.Fprintf(w,
+		_, _ = fmt.Fprintf(w,
 			"\033[32m%d passed, %d skipped (%d total, %s)\033[0m\n",
 			result.Passed, result.Skipped, result.Total, result.Duration,
 		)
 	} else {
-		fmt.Fprintf(w,
+		_, _ = fmt.Fprintf(w,
 			"\033[31m%d failed, %d passed, %d skipped (%d total, %s)\033[0m\n",
 			result.Failed, result.Passed, result.Skipped, result.Total, result.Duration,
 		)
@@ -251,7 +251,7 @@ func printSummary(w io.Writer, result runner.Result) {
 func printFocusOutput(w io.Writer, result runner.Result) {
 	printPackageErrors(w, result)
 	if result.OK {
-		fmt.Fprintf(w,
+		_, _ = fmt.Fprintf(w,
 			"\033[32mAll %d tests passed (%s)\033[0m\n",
 			result.Total, result.Duration,
 		)
@@ -259,16 +259,16 @@ func printFocusOutput(w io.Writer, result runner.Result) {
 	}
 
 	for _, id := range result.FailedTests {
-		fmt.Fprintf(w, "\033[31m--- FAIL: %s\033[0m\n", id)
+		_, _ = fmt.Fprintf(w, "\033[31m--- FAIL: %s\033[0m\n", id)
 		if lines, ok := result.Output[id]; ok {
 			for _, line := range lines {
-				fmt.Fprint(w, "    ", line)
+				_, _ = fmt.Fprint(w, "    ", line)
 			}
 		}
-		fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w)
 	}
 
-	fmt.Fprintf(w,
+	_, _ = fmt.Fprintf(w,
 		"\033[31m%d failed, %d passed (%d total, %s)\033[0m\n",
 		result.Failed, result.Passed, result.Total, result.Duration,
 	)
@@ -278,21 +278,21 @@ func printFailedTests(w io.Writer, result runner.Result) {
 	if len(result.FailedTests) == 0 {
 		return
 	}
-	fmt.Fprintln(w, "\nFailed tests:")
+	_, _ = fmt.Fprintln(w, "\nFailed tests:")
 	for _, id := range result.FailedTests {
-		fmt.Fprintf(w, "  - %s\n", id)
+		_, _ = fmt.Fprintf(w, "  - %s\n", id)
 	}
 }
 
 func printPackageErrors(w io.Writer, result runner.Result) {
 	for _, pkg := range result.FailedPackages {
-		fmt.Fprintf(w, "\033[31m--- FAIL: %s (build)\033[0m\n", pkg)
+		_, _ = fmt.Fprintf(w, "\033[31m--- FAIL: %s (build)\033[0m\n", pkg)
 		if lines, ok := result.PackageOutput[pkg]; ok {
 			for _, line := range lines {
-				fmt.Fprint(w, "    ", line)
+				_, _ = fmt.Fprint(w, "    ", line)
 			}
 		}
-		fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w)
 	}
 }
 
