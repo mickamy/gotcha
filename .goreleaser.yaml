@@ -13,7 +13,7 @@ builds:
     goos: [ darwin, linux, windows ]
     goarch: [ amd64, arm64 ]
     ldflags:
-      - "-X github.com/mickamy/gotcha/cmd/version.version={{.Version}}"
+      - "-X main.version={{.Version}}"
     binary: gotcha
 
 archives:
