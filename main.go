@@ -64,6 +64,11 @@ func runCmd(args []string) {
 	summary := fs.Bool("summary", false, "Show test summary (pass/fail counts)")
 	_ = fs.Parse(args)
 
+	if *focus && *summary {
+		fmt.Fprintln(os.Stderr, "error: --focus and --summary are mutually exclusive")
+		os.Exit(1)
+	}
+
 	cfg := loadConfig()
 	ctx := context.Background()
 	pkgs := resolvePackages(ctx, cfg, *fast)
@@ -95,6 +100,11 @@ func watchCmd(args []string) {
 	focus := fs.Bool("focus", false, "Show only failed test output")
 	summary := fs.Bool("summary", false, "Show test summary (pass/fail counts)")
 	_ = fs.Parse(args)
+
+	if *focus && *summary {
+		fmt.Fprintln(os.Stderr, "error: --focus and --summary are mutually exclusive")
+		os.Exit(1)
+	}
 
 	cfg := loadConfig()
 
