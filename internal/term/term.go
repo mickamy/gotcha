@@ -2,8 +2,10 @@ package term
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"slices"
+	"time"
 
 	"golang.org/x/term"
 )
@@ -50,27 +52,48 @@ func (r *RawMode) Exit() error {
 }
 
 // Listen reads single bytes from stdin and sends KeyEvents for recognized keys.
-// It blocks until ctrl+c is received or an error occurs.
-func Listen(keys []string, ch chan<- KeyEvent) {
+// It returns when done is closed, ctrl+c/ctrl+d is received, or stdin reaches EOF.
+func Listen(keys []string, ch chan<- KeyEvent, done <-chan struct{}) {
+	reads := make(chan byte, 1)
+
+	go readLoop(reads)
+
+	for {
+		select {
+		case <-done:
+			return
+		case b := <-reads:
+			switch b {
+			case 3: // ctrl+c
+				ch <- KeyEvent{Key: "ctrl+c"}
+				return
+			case 4: // ctrl+d
+				ch <- KeyEvent{EOF: true}
+				return
+			}
+
+			key := string(b)
+			if slices.Contains(keys, key) {
+				ch <- KeyEvent{Key: key}
+			}
+		}
+	}
+}
+
+func readLoop(out chan<- byte) {
 	buf := make([]byte, 1)
 	for {
 		n, err := os.Stdin.Read(buf)
-		if err != nil || n == 0 {
-			continue
+		if n > 0 {
+			out <- buf[0]
 		}
-
-		switch buf[0] {
-		case 3: // ctrl+c
-			ch <- KeyEvent{Key: "ctrl+c"}
-			return
-		case 4: // ctrl+d
-			ch <- KeyEvent{EOF: true}
-			return
-		}
-
-		key := string(buf[0])
-		if slices.Contains(keys, key) {
-			ch <- KeyEvent{Key: key}
+		if err != nil {
+			if err == io.EOF {
+				out <- 4 // signal as ctrl+d
+				return
+			}
+			// Avoid busy loop on persistent errors.
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 }

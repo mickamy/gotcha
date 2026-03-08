@@ -41,7 +41,7 @@ func Watch(cfg config.Config, onChange OnChange) error {
 	done := make(chan struct{})
 
 	go func() {
-		term.Listen([]string{"r", "R", "q", "Q"}, keys)
+		term.Listen([]string{"r", "R", "q", "Q"}, keys, done)
 		close(done)
 	}()
 
