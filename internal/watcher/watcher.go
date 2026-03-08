@@ -91,33 +91,33 @@ func runLoop(trigger <-chan struct{}, stop <-chan struct{}, fn func()) {
 
 func debounceLoop(signal <-chan struct{}, stop <-chan struct{}, trigger chan<- struct{}) {
 	for {
+		// Wait for the first signal.
 		select {
 		case <-signal:
 		case <-stop:
 			return
 		}
 
+		// Reset the timer on each subsequent signal until quiet.
 		timer := time.NewTimer(debounceDelay)
-		select {
-		case <-timer.C:
+	drain:
+		for {
 			select {
-			case trigger <- struct{}{}:
-			default:
+			case <-signal:
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(debounceDelay)
+			case <-timer.C:
+				select {
+				case trigger <- struct{}{}:
+				default:
+				}
+				break drain
+			case <-stop:
+				timer.Stop()
+				return
 			}
-			drain(signal)
-		case <-stop:
-			timer.Stop()
-			return
-		}
-	}
-}
-
-func drain(ch <-chan struct{}) {
-	for {
-		select {
-		case <-ch:
-		default:
-			return
 		}
 	}
 }
