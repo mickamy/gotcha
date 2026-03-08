@@ -60,7 +60,7 @@ func (r *RawMode) Exit() error {
 func Listen(keys []string, ch chan<- KeyEvent, done <-chan struct{}) {
 	reads := make(chan byte, 1)
 
-	go readLoop(reads)
+	go readLoop(reads, done)
 
 	for {
 		select {
@@ -69,31 +69,48 @@ func Listen(keys []string, ch chan<- KeyEvent, done <-chan struct{}) {
 		case b := <-reads:
 			switch b {
 			case 3: // ctrl+c
-				ch <- KeyEvent{Key: "ctrl+c"}
+				select {
+				case ch <- KeyEvent{Key: "ctrl+c"}:
+				case <-done:
+				}
 				return
 			case 4: // ctrl+d
-				ch <- KeyEvent{EOF: true}
+				select {
+				case ch <- KeyEvent{EOF: true}:
+				case <-done:
+				}
 				return
 			}
 
 			key := string(b)
 			if slices.Contains(keys, key) {
-				ch <- KeyEvent{Key: key}
+				select {
+				case ch <- KeyEvent{Key: key}:
+				case <-done:
+					return
+				}
 			}
 		}
 	}
 }
 
-func readLoop(out chan<- byte) {
+func readLoop(out chan<- byte, done <-chan struct{}) {
 	buf := make([]byte, 1)
 	for {
 		n, err := os.Stdin.Read(buf)
 		if n > 0 {
-			out <- buf[0]
+			select {
+			case out <- buf[0]:
+			case <-done:
+				return
+			}
 		}
 		if err != nil {
 			if err == io.EOF {
-				out <- 4 // signal as ctrl+d
+				select {
+				case out <- 4: // signal as ctrl+d
+				case <-done:
+				}
 				return
 			}
 			// Avoid busy loop on persistent errors.
