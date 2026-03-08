@@ -150,18 +150,28 @@ func TestDebounceLoop_TriggerBackpressure(t *testing.T) {
 	trigger := make(chan struct{}) // unbuffered, no reader
 	stop := make(chan struct{})
 
-	go watcher.DebounceLoop(signal, stop, trigger)
-	defer close(stop)
+	done := make(chan struct{})
+	go func() {
+		watcher.DebounceLoop(signal, stop, trigger)
+		close(done)
+	}()
 
+	// Send a signal; debounceLoop will try to send on trigger after the delay
+	// with no receiver on the other end.
 	signal <- struct{}{}
 
-	// debounceLoop should not block forever when trigger is full;
-	// it uses a non-blocking send.
+	// Wait longer than debounce delay so the non-blocking send is attempted.
+	time.Sleep(watcher.DebounceDelay * 2)
+
+	// If debounceLoop uses a blocking send, it will be stuck and never
+	// observe stop being closed.
+	close(stop)
+
 	select {
-	case <-trigger:
-		// consumed
-	case <-time.After(watcher.DebounceDelay * 3):
-		t.Fatal("debounceLoop blocked on full trigger channel")
+	case <-done:
+		// ok: exited despite trigger having no receiver
+	case <-time.After(time.Second):
+		t.Fatal("debounceLoop did not exit with unbuffered trigger and no receiver; possible blocking send")
 	}
 }
 
