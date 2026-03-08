@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -124,10 +125,9 @@ func watchCmd(args []string) {
 func initCmd() {
 	if _, err := os.Stat(config.DefaultPath); err == nil {
 		fmt.Print(".gotcha.yaml already exists. Overwrite? [y/N]: ")
-		var res string
-		if _, err := fmt.Scanln(&res); err != nil {
-			fatal(fmt.Errorf("read input: %w", err))
-		}
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		res := strings.TrimSpace(scanner.Text())
 		if res != "y" && res != "Y" {
 			fmt.Println("Canceled.")
 			return
